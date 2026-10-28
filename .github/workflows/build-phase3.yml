@@ -1,4 +1,4 @@
-name: Build MJ Stack Tracker Phase 2
+name: Build MJ Stack Tracker Phase 3
 
 on:
   workflow_dispatch:
@@ -9,24 +9,24 @@ permissions:
 
 jobs:
   build:
-    name: Validate and build Phase 2 Auto Geometry debug APK
+    name: Validate and build Phase 3 debug APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
 
-      - name: Check source archive
+      - name: Verify Phase 3 source archive
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_NAME="MJ_Stack_Tracker_PHASE2_AUTO_SOURCE.zip"
+          ZIP_NAME="MJ_Stack_Tracker_PHASE3_SOURCE.zip"
           if [[ ! -f "$ZIP_NAME" ]]; then
             echo "ERROR: $ZIP_NAME is missing from the repository root."
             exit 1
           fi
           python3 - <<'PY'
           import sys, zipfile
-          archive = 'MJ_Stack_Tracker_PHASE2_AUTO_SOURCE.zip'
+          archive = 'MJ_Stack_Tracker_PHASE3_SOURCE.zip'
           required = {
               'build.gradle',
               'settings.gradle',
@@ -34,7 +34,12 @@ jobs:
               'app/build.gradle',
               'app/src/main/AndroidManifest.xml',
               'app/src/main/java/com/mj/stacktracker/MainActivity.java',
-              'app/src/main/java/com/mj/stacktracker/CalibrationOverlayView.java',
+              'app/src/main/java/com/mj/stacktracker/LocalHistoryDb.java',
+              'app/src/main/java/com/mj/stacktracker/FrameDetector.java',
+              'app/src/main/java/com/mj/stacktracker/TrackManager.java',
+              'app/src/main/java/com/mj/stacktracker/FrameOverlayView.java',
+              'app/src/main/java/com/mj/stacktracker/MetricMath.java',
+              'MJ_STACK_TRACKER_UPDATED_ROADMAP_AND_FORMULAS.md',
           }
           with zipfile.ZipFile(archive) as z:
               entries = set(z.namelist())
@@ -44,14 +49,14 @@ jobs:
               for item in missing:
                   print('  - ' + item, file=sys.stderr)
               sys.exit(1)
-          print('Archive layout check passed.')
+          print('Phase 3 archive structure check passed.')
           PY
 
       - name: Extract Android project to workspace root
         shell: bash
         run: |
           set -euo pipefail
-          unzip -oq MJ_Stack_Tracker_PHASE2_AUTO_SOURCE.zip -d "$GITHUB_WORKSPACE"
+          unzip -oq MJ_Stack_Tracker_PHASE3_SOURCE.zip -d "$GITHUB_WORKSPACE"
           for file in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
             if [[ ! -f "$file" ]]; then
               echo "ERROR: required extracted project file missing: $file"
@@ -77,7 +82,7 @@ jobs:
         with:
           gradle-version: '9.6.0'
 
-      - name: Build Phase 2 Auto Geometry debug APK
+      - name: Build Phase 3 debug APK
         shell: bash
         run: |
           set -o pipefail
@@ -95,10 +100,10 @@ jobs:
           ls -lh "$APK"
           sha256sum "$APK" | tee apk-sha256.txt
 
-      - name: Upload Phase 2 Auto Geometry debug APK
+      - name: Upload Phase 3 debug APK
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: MJ-Stack-Tracker-Phase2-Auto-debug-apk
+          name: MJ-Stack-Tracker-Phase3-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -107,7 +112,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: MJ-Stack-Tracker-Phase2-Auto-build-diagnostics
+          name: MJ-Stack-Tracker-Phase3-build-diagnostics
           path: |
             build.log
             apk-sha256.txt
