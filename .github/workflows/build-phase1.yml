@@ -15,18 +15,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
 
-      - name: Check source archive and root layout
+      - name: Check source archive
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_NAME="MJ_Stack_Tracker_PHASE1_SOURCE.zip"
+          ZIP_NAME="MJ_Stack_Tracker_PHASE1_SOURCE_FINAL.zip"
           if [[ ! -f "$ZIP_NAME" ]]; then
             echo "ERROR: $ZIP_NAME is missing from the repository root."
             exit 1
           fi
           python3 - <<'PY'
           import sys, zipfile
-          archive = 'MJ_Stack_Tracker_PHASE1_SOURCE.zip'
+          archive = 'MJ_Stack_Tracker_PHASE1_SOURCE_FINAL.zip'
           required = {
               'build.gradle',
               'settings.gradle',
@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          unzip -oq MJ_Stack_Tracker_PHASE1_SOURCE.zip -d "$GITHUB_WORKSPACE"
+          unzip -oq MJ_Stack_Tracker_PHASE1_SOURCE_FINAL.zip -d "$GITHUB_WORKSPACE"
           for file in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
             if [[ ! -f "$file" ]]; then
               echo "ERROR: required extracted project file missing: $file"
