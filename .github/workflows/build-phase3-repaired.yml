@@ -1,32 +1,35 @@
-name: Build MJ Stack Tracker Phase 3
+name: Build MJ Stack Tracker Phase 3 Repaired
 
 on:
   workflow_dispatch:
   push:
+    paths:
+      - 'MJ_Stack_Tracker_PHASE3_REPAIRED.zip'
+      - '.github/workflows/build-phase3-repaired.yml'
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Validate and build Phase 3 debug APK
+    name: Validate and build repaired Phase 3 debug APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
 
-      - name: Verify Phase 3 source archive
+      - name: Verify repaired source archive
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_NAME="MJ_Stack_Tracker_PHASE3_SOURCE.zip"
+          ZIP_NAME="MJ_Stack_Tracker_PHASE3_REPAIRED.zip"
           if [[ ! -f "$ZIP_NAME" ]]; then
             echo "ERROR: $ZIP_NAME is missing from the repository root."
             exit 1
           fi
           python3 - <<'PY'
           import sys, zipfile
-          archive = 'MJ_Stack_Tracker_PHASE3_SOURCE.zip'
+          archive = 'MJ_Stack_Tracker_PHASE3_REPAIRED.zip'
           required = {
               'build.gradle',
               'settings.gradle',
@@ -39,24 +42,30 @@ jobs:
               'app/src/main/java/com/mj/stacktracker/TrackManager.java',
               'app/src/main/java/com/mj/stacktracker/FrameOverlayView.java',
               'app/src/main/java/com/mj/stacktracker/MetricMath.java',
-              'MJ_STACK_TRACKER_UPDATED_ROADMAP_AND_FORMULAS.md',
           }
           with zipfile.ZipFile(archive) as z:
               entries = set(z.namelist())
+              detector = z.read('app/src/main/java/com/mj/stacktracker/FrameDetector.java').decode('utf-8')
           missing = sorted(required - entries)
           if missing:
               print('ERROR: required files missing from ZIP:', file=sys.stderr)
               for item in missing:
                   print('  - ' + item, file=sys.stderr)
               sys.exit(1)
-          print('Phase 3 archive structure check passed.')
+          if 'COLOR_RGBA2HSV' in detector:
+              print('ERROR: obsolete COLOR_RGBA2HSV constant remains in FrameDetector.java', file=sys.stderr)
+              sys.exit(1)
+          if 'Imgproc.COLOR_RGBA2RGB' not in detector or 'Imgproc.COLOR_RGB2HSV' not in detector:
+              print('ERROR: expected two-step RGBA -> RGB -> HSV conversion not found', file=sys.stderr)
+              sys.exit(1)
+          print('Archive layout and OpenCV conversion check passed.')
           PY
 
       - name: Extract Android project to workspace root
         shell: bash
         run: |
           set -euo pipefail
-          unzip -oq MJ_Stack_Tracker_PHASE3_SOURCE.zip -d "$GITHUB_WORKSPACE"
+          unzip -oq MJ_Stack_Tracker_PHASE3_REPAIRED.zip -d "$GITHUB_WORKSPACE"
           for file in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
             if [[ ! -f "$file" ]]; then
               echo "ERROR: required extracted project file missing: $file"
@@ -82,7 +91,7 @@ jobs:
         with:
           gradle-version: '9.6.0'
 
-      - name: Build Phase 3 debug APK
+      - name: Build repaired Phase 3 debug APK
         shell: bash
         run: |
           set -o pipefail
@@ -100,10 +109,10 @@ jobs:
           ls -lh "$APK"
           sha256sum "$APK" | tee apk-sha256.txt
 
-      - name: Upload Phase 3 debug APK
+      - name: Upload repaired Phase 3 debug APK
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: MJ-Stack-Tracker-Phase3-debug-apk
+          name: MJ-Stack-Tracker-Phase3-Repaired-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -112,10 +121,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: MJ-Stack-Tracker-Phase3-build-diagnostics
+          name: MJ-Stack-Tracker-Phase3-Repaired-build-diagnostics
           path: |
             build.log
             apk-sha256.txt
             app/build/reports/**
           if-no-files-found: warn
           retention-days: 14
+          
