@@ -1,86 +1,121 @@
-name: Build Debug APK
+name: Build MJ Stack Tracker Phase 0
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-      - master
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Build MJ Stack Tracker BUILD-0
+    name: Validate and build debug APK
     runs-on: ubuntu-latest
-    timeout-minutes: 40
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
 
-      - name: Check source ZIP
+      - name: Check source archive and root layout
+        shell: bash
         run: |
-          test -s MJ_Stack_Tracker_BUILD0_SOURCE.zip
-          echo "Source ZIP found."
+          set -euo pipefail
+          ZIP_NAME="MJ_Stack_Tracker_PHASE0_SOURCE.zip"
+          if [[ ! -f "$ZIP_NAME" ]]; then
+            echo "ERROR: $ZIP_NAME is missing from the repository root."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import sys, zipfile
+          from pathlib import PurePosixPath
+          archive = 'MJ_Stack_Tracker_PHASE0_SOURCE.zip'
+          required = {
+              'build.gradle',
+              'settings.gradle',
+              'gradle.properties',
+              'app/build.gradle',
+              'app/src/main/AndroidManifest.xml',
+              'app/src/main/java/com/mj/stacktracker/MainActivity.java',
+          }
+          with zipfile.ZipFile(archive) as z:
+              entries = set(z.namelist())
+          missing = sorted(required - entries)
+          if missing:
+              print('ERROR: required files missing from ZIP root or archive:', file=sys.stderr)
+              for item in missing:
+                  print(f'  - {item}', file=sys.stderr)
+              print('The ZIP must not contain one extra parent project folder.', file=sys.stderr)
+              sys.exit(1)
+          for item in sorted(required):
+              if item not in entries:
+                  sys.exit(f'ERROR: {item} is not at archive root-relative path')
+          print('Archive layout check passed.')
+          PY
 
-      - name: Extract Android project
+      - name: Extract Android project to workspace root
+        shell: bash
         run: |
-          unzip -oq MJ_Stack_Tracker_BUILD0_SOURCE.zip -d .
-
-          test -s build.gradle
-          test -s settings.gradle
-          test -s gradle.properties
-          test -s app/build.gradle
-          test -s app/src/main/AndroidManifest.xml
-          test -s app/src/main/java/com/mjthakur/stacktracker/MainActivity.java
-
-          echo "Android project structure OK."
+          set -euo pipefail
+          unzip -oq MJ_Stack_Tracker_PHASE0_SOURCE.zip -d "$GITHUB_WORKSPACE"
+          for file in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
+            if [[ ! -f "$file" ]]; then
+              echo "ERROR: required extracted project file missing: $file"
+              exit 1
+            fi
+          done
+          echo "Project root verified: $GITHUB_WORKSPACE"
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@v4.0.4
 
-      - name: Install Android SDK packages
-        run: |
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+      - name: Install pinned Android SDK packages
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v5
+      - name: Set up pinned Gradle 9.6.0
+        uses: gradle/actions/setup-gradle@v6.4.0
         with:
           gradle-version: '9.6.0'
 
-      - name: Create Gradle Wrapper
+      - name: Build debug APK
+        shell: bash
         run: |
-          gradle --no-daemon wrapper \
-            --gradle-version 9.6.0 \
-            --distribution-type bin
+          set -o pipefail
+          gradle --no-daemon clean assembleDebug 2>&1 | tee build.log
 
-      - name: Verify Gradle Wrapper
+      - name: Verify APK output
+        shell: bash
         run: |
-          test -s gradlew
-          test -s gradle/wrapper/gradle-wrapper.properties
-          test -s gradle/wrapper/gradle-wrapper.jar
-          chmod +x gradlew
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          if [[ ! -s "$APK" ]]; then
+            echo "ERROR: APK not found or empty: $APK"
+            exit 1
+          fi
+          ls -lh "$APK"
+          sha256sum "$APK" | tee apk-sha256.txt
 
-      - name: Build Debug APK
-        run: |
-          ./gradlew --no-daemon clean assembleDebug --stacktrace
-
-      - name: Verify APK
-        run: |
-          test -s app/build/outputs/apk/debug/app-debug.apk
-          ls -lh app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v7.0.2
         with:
-          name: MJ-Stack-Tracker-BUILD-0
+          name: MJ-Stack-Tracker-Phase0-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: MJ-Stack-Tracker-Phase0-build-diagnostics
+          path: |
+            build.log
+            apk-sha256.txt
+            app/build/reports/**
+          if-no-files-found: warn
+          retention-days: 14
+          
