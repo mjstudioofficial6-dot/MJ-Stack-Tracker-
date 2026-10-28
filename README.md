@@ -1,489 +1,59 @@
-MJ Stack Tracker
-
-Offline Android video-based stack tracking and quantity measurement app.
-
-Project Status
-
-🚧 Development — Phase 0
-
-MJ Stack Tracker is being developed in small, testable phases.
-
-The first goal is to prove that the Android project can build successfully through GitHub Actions, install on an Android phone, and launch correctly.
-
-«Important: A successful APK build does NOT mean automatic one-piece counting is already solved. Counting accuracy must be demonstrated using controlled videos with known quantities.»
-
----
-
-Project Goal
-
-MJ Stack Tracker is designed to:
-
-- Select an already-recorded video from the phone.
-- Process the video locally on the Android device.
-- Track visually similar pieces and stacks.
-- Maintain an inventory starting from 416 pieces.
-- Use 0.33 mm as an editable nominal thickness input.
-- Track stack movement, removal, addition, transfer, split and merge events.
-- Show red side/edge overlays and blue top-surface outlines.
-- Estimate quantity only when sufficient visual evidence exists.
-- Mark uncertain results as Pending Confirmation instead of inventing an exact count.
-- Keep an editable local event history.
-- Support manual correction, undo/reversal and CSV/JSON export.
-- Work offline at runtime.
-
----
-
-What the App Does NOT Require
-
-- No camera permission.
-- No Firebase.
-- No login/account.
-- No cloud AI API.
-- No runtime server.
-- No uploading of original videos to GitHub or cloud AI.
-- No OCR/card-rank recognition in the initial stack-counting system.
-
----
-
-Initial Inventory Model
-
-- Starting inventory: 416 pieces
-- Default nominal thickness: 0.33 mm/piece
-- Theoretical total thickness: 137.28 mm
-- Thickness is a configurable input, not a proven measurement from the video.
-
-The app must never force visible stacks to equal 416 when some pieces are hidden, temporarily occluded, out of view or confirmed removed.
-
----
-
-Core Principle
-
-Movement is NOT automatically a quantity change.
-
-The system must distinguish:
-
-- Stack movement
-- Perspective/scale change
-- Camera movement
-- Blur
-- Hand occlusion
-- Stack lift/rotation
-- Split
-- Merge
-- Transfer
-- Pieces leaving the visible area
-- Actual quantity change
-
-Automatic events should be confirmed only when multiple frames and consistency checks provide enough evidence.
-
-If the evidence is insufficient, the result must be marked:
-
-Pending Confirmation / Unknown
-
-instead of creating a fake exact count.
-
----
-
-Development Phases
-
-Phase 0 — Build & Install Proof
-
-- Minimal Java Android app.
-- GitHub Actions build.
-- Debug APK artifact.
-- Install on Android phone.
-- Launch successfully.
-
-Acceptance
-
-- Build succeeds.
-- APK artifact exists.
-- APK installs.
-- App launches.
-- Known-good commit is preserved.
-
----
-
-Phase 1 — Video Input & Player
-
-- Android Photo Picker / SAF.
-- Select local video.
-- Play/pause.
-- Seek.
-- Timestamp and duration.
-- Video remains synchronized with analysis.
-
----
-
-Phase 2 — Overlay & Manual Calibration
-
-- Red side/edge lines.
-- Blue top-surface outline.
-- Adjustable anchor points.
-- Manual correction.
-- Calibration saved per video session.
-- Recalibration option.
-
----
-
-Phase 3 — Frame Analysis
-
-- Bounded frame extraction.
-- Original-frame preservation.
-- Blur/sharpness measurement.
-- Optional denoise.
-- Contrast enhancement.
-- Conservative sharpening.
-- Original vs enhanced comparison.
-
-The entire 4K video must never be loaded into RAM.
-
----
-
-Phase 4 — Geometry
-
-- Table-plane perspective correction.
-- Separate raised-stack side/height measurement.
-- Detect calibration drift.
-- Detect camera movement where possible.
-- Detect low-confidence views.
-- Request recalibration when necessary.
-
-Moving a stack closer/farther from the camera must not automatically become a quantity change.
-
----
-
-Phase 5 — Stack Tracking
-
-- Stable Stack IDs.
-- Position tracking.
-- State tracking.
-- Occlusion handling.
-- Out-of-view handling.
-- Split detection.
-- Merge detection.
-- Transfer detection.
-
----
-
-Phase 6 — Quantity Estimation
-
-The quantity engine may use:
-
-- Stack side profile.
-- Apparent physical height.
-- Local calibration.
-- Visible layer/edge periodicity when genuinely resolved.
-- Temporal consistency.
-- Known starting quantity.
-- Configurable nominal thickness.
-
-The system must produce:
-
-- Candidate quantity.
-- Confidence.
-- Evidence/state.
-- Pending status when uncertain.
-
-A single screenshot or AI guess is not sufficient proof of an exact quantity.
-
----
-
-Phase 7 — Inventory & History
-
-Local database must store:
-
-- Video session.
-- Calibration.
-- Stack IDs.
-- Current quantity estimate.
-- Stack position.
-- Stack status.
-- Confidence.
-- Events.
-- Before/after counts.
-- Event delta.
-- Timestamp.
-- Confirmation state.
-- Corrections.
-
-Required actions:
-
-- View event.
-- Jump video to event timestamp.
-- Confirm.
-- Correct.
-- Undo/reverse.
-- Export CSV.
-- Export JSON.
-
-Corrections must preserve an audit trail.
-
----
-
-Phase 8 — Robustness Testing
-
-Test:
-
-- Fixed stack.
-- No movement.
-- 1-piece change.
-- 5-piece change.
-- 10-piece change.
-- Larger quantity changes.
-- Stack movement.
-- Transfer between stacks.
-- Split.
-- Merge.
-- Hand occlusion.
-- Stack lift.
-- Stack rotation.
-- Out-of-view.
-- Return to view.
-- Blur.
-- Lighting changes.
-- FHD video.
-- 4K video.
-- Long videos.
-- Unsupported/corrupt videos.
-- Low-storage conditions.
-
----
-
-Phase 9 — Release Candidate
-
-- Freeze dependencies.
-- Clean install test.
-- Update test.
-- History persistence test.
-- Debug verification.
-- Signed release build.
-- Final feature checklist.
-- Accuracy report.
-- Known limitations document.
-
----
-
-Computer Vision Rules
-
-The untouched original frame is the primary measurement source.
-
-Enhanced frames are supporting observations only.
-
-Filters such as:
-
-- Denoise
-- Contrast
-- Sharpening
-- Stabilization
-- Super-resolution
-
-must not be treated as proof of physical information that was not actually recorded.
-
-AI super-resolution must NOT be the sole source for exact quantity counting.
-
----
-
-Accuracy Policy
-
-The project must measure:
-
-- Exact-count accuracy.
-- Absolute count error.
-- 1-piece change accuracy.
-- 5-piece change accuracy.
-- 10-piece change accuracy.
-- False change events per minute.
-- Missed events.
-- Stack tracking/recovery rate.
-- Processing time.
-- RAM usage.
-- Crash behavior.
-- Percentage of events requiring manual confirmation.
-
-The project must NOT claim:
-
-"100% accurate"
-
-unless representative known-ground-truth testing actually supports that claim.
-
----
-
-Recommended Technology
-
-Initial technology:
-
-- Native Android.
-- Java for Phase 0.
-- AndroidX Media3 / ExoPlayer.
-- Android Photo Picker / Storage Access Framework.
-- OpenCV when required.
-- SQLite initially.
-- Background Executor/threading.
-- GitHub Actions for cloud compilation.
-- Offline runtime.
-
-Dependencies must be added gradually.
-
-Do NOT add video, OpenCV, AI, OCR and database together in the first build.
-
----
-
-Phone-Only Development
-
-The project is designed to be developed from an Android phone.
-
-Normal workflow:
-
-1. Edit/upload files through GitHub.
-2. Commit changes.
-3. Start GitHub Actions.
-4. GitHub builds the APK in the cloud.
-5. Download APK artifact to the phone.
-6. Install APK.
-7. Test on the phone.
-8. Record test result.
-9. Continue only after the current phase passes.
-
-A laptop/PC is not required for the normal development workflow.
-
-GitHub Actions is used for building, not for running the AI or processing the user's video.
-
----
-
-Repository Structure
-
-Phase 0 uses:
-
-MJ-Stack-Tracker/
-├── README.md
-├── MJ_Stack_Tracker_PHASE0_SOURCE.zip
-└── .github/
-    └── workflows/
-        └── build-phase0.yml
-
-The Phase 0 ZIP must contain the Android project directly at its archive root:
-
-build.gradle
-settings.gradle
-gradle.properties
-app/
-├── build.gradle
-└── src/
-    └── main/
-        └── AndroidManifest.xml
-
-There must NOT be an unnecessary nested parent folder inside the ZIP.
-
-After the first successful baseline, a standard Gradle Wrapper should be committed and later builds should use it directly.
-
----
-
-Build Safety Rules
-
-DO NOT:
-
-- Run Gradle setup before extracting the source archive.
-- Mix multiple old Phase 0 workflows.
-- Use different source ZIP names for the same active workflow.
-- Add all dependencies at once.
-- Treat YAML validation as proof of a successful Android build.
-- Treat ZIP validation as proof of a successful Android build.
-- Treat APK compilation as proof that automatic counting works.
-
-When a build fails:
-
-1. Find the first meaningful error.
-2. Identify the actual root cause.
-3. Fix only the relevant problem.
-4. Rebuild.
-5. Test the APK.
-6. Preserve the last known-good commit.
-
----
-
-Previous Problems to Avoid
-
-Previous development encountered:
-
-- Incorrect/nested ZIP project paths.
-- Gradle setup before project extraction.
-- Workflow not appearing in GitHub Actions.
-- Missing Gradle Wrapper.
-- Kotlin "singleLine" errors.
-- Kotlin "LayoutParams" errors.
-- Unnecessary ML Kit native-library packaging problems.
-- Too many dependencies added too early.
-
-Phase 0 intentionally uses simple Java Android Views to reduce these risks.
-
----
-
-Testing Requirement
-
-The current sample video alone is NOT sufficient to prove exact counting.
-
-Controlled test videos must be created with known ground-truth changes.
-
-Example:
-
-Initial Stack = 100
-
-Remove 1  → expected 99
-Remove 5  → expected 94
-Add 10     → expected 104
-Transfer 5 from Stack A → Stack B
-Split stack
-Merge stacks
-Hide stack → Unknown/Occluded
-Return stack → Reconcile
-
-The ground-truth event log should be maintained separately from the application so the algorithm can be objectively evaluated.
-
----
-
-Privacy
-
-All video analysis is intended to happen locally on the phone.
-
-Original videos must NOT be uploaded to:
-
-- GitHub
-- Firebase
-- Cloud AI services
-- Remote servers
-
-GitHub Actions is only a build environment.
-
----
-
-Current Milestone
-
-Phase 0
-
-Checklist:
-
-- [ ] GitHub repository created.
-- [ ] Correct Phase 0 source ZIP uploaded.
-- [ ] "README.md" added.
-- [ ] Workflow exists at ".github/workflows/build-phase0.yml".
-- [ ] "workflow_dispatch" works.
-- [ ] GitHub Actions build succeeds.
-- [ ] APK artifact is generated.
-- [ ] APK installs on Android phone.
-- [ ] App launches successfully.
-- [ ] Known-good commit is preserved.
-
-Do not start Phase 1 until Phase 0 passes.
-
----
-
-Development Philosophy
-
-Build → Compile → Install → Test → Measure → Preserve → Continue
-
-The project prioritizes measured results over assumptions.
-
-Automatic quantity counting is an engineering goal. It must be demonstrated using real controlled test footage before it is considered reliable.
-
-MJ Stack Tracker — Build small. Test honestly. Measure accurately.
+MJ Stack Tracker — Integrated Phase 9 Candidate
+Package version: 0.9.0 (versionCode 9)
+Platform: Native Android, Java + Android Views
+Runtime: Offline; user selects a previously recorded local video
+Build: GitHub Actions (build-phase9-integrated.yml)
+Starting model: MASTER-001, initial count 416, nominal thickness 0.33 mm per piece
+Why this build replaces the separate phases
+This package consolidates the working Phase 0/1 video-player foundation and the Phase 3 analysis/history foundation, then brings the Phase 2/3.1 work-area and master-lock corrections together with calibration, lineage events, a conservation ledger, review/edit/delete, export, and the conceptual layer model. It is one integrated candidate source package rather than separate phase projects. The app uses package ID com.mj.stacktracker.phase9 so it can be installed alongside the older Phase 3 build during validation, avoiding an installation-signature conflict or deleting its local history.
+Main workflow in the app
+Select a recorded video from the phone. The video is displayed in a YouTube-like viewport.
+Pause at the frame where the original, intact stack is visible.
+Press MARK WORK AREA and drag a rectangle around the full region where the stack components can move. Keep unrelated bright objects and background decorations outside it.
+Set the initial piece count (default 416) and nominal piece thickness (default 0.33 mm).
+Press LOCK INITIAL STACK and drag one rectangle around the entire original stack. This stores the stable root identity MASTER-001 and the video timestamp from which analysis begins.
+Press ANALYZE FRAMES. The OpenCV contour proposal detector works only inside the work area. Visual components use child IDs such as M01-P01, M01-P02, etc. Candidate split events are pending review; image detections never silently change piece counts.
+Use the event/ledger controls to confirm splits/merges and manually record known piece counts, occlusion, out-of-view, additions, and confirmed removals. The ledger checks the conservation equation.
+Calibrate a known line on the table plane and a separate known line on the stack side if physical estimates are needed. Recalibrate if the camera angle, zoom, crop, orientation or distance changes.
+Review history by selecting a saved session. Search, tap a saved event to load its source video and seek to that event timestamp, confirm/reject/delete the event, and export a JSON or CSV report to a chosen local file.
+What is actually implemented
+Native Android video picker and Media3 playback.
+Frame-by-frame analysis loop using one retrieved bitmap at a time; no full-video RAM load.
+User-marked work-area rectangle, saved per video.
+User-marked initial master-stack rectangle, saved per video, with an explicit MASTER-001 lineage root and lock timestamp. The first successfully decoded analysis frame is seeded from the user's manually marked master rectangle rather than relying on the weak contour detector to rediscover it.
+OpenCV bright/neutral contour proposals restricted to the marked work area; overlapping proposals are suppressed.
+Temporal visual ID association, three-frame persistence gate, pending possible-split events, and track-not-visible events.
+Timestamp-indexed local SQLite history, progress saves, review overlay, local event-status editing/deletion, history search, JSON/CSV export.
+Separate table-plane and stack-side pixels-per-millimetre calibration controls.
+Local conservation ledger with visible, occluded, out-of-view, confirmed removed, added and unassigned buckets; split/unknown allocation actions and undo history.
+Schematic digital model of 416 conceptual layers at a nominal 0.33 mm each. The model tilt slider is manual and illustrative.
+JVM unit tests for ledger conservation and basic measurement math.
+No camera permission, broad storage permission, Firebase, login, analytics SDK, runtime server or cloud AI API.
+Important limits — not hidden
+This is an integrated Phase 9 candidate, not a validated production tracker. The existing detector is still classical OpenCV contour logic, not a trained semantic model. A white region inside the work area can still be a false detection. Master locking provides a stable lineage root; it does not magically guarantee that every identical split component is visually identifiable after arbitrary motion or occlusion.
+MASTER-001 is the stable logical root. M01-Pxx labels are visual component tracks. A new child ID is only a possible split, never proof by itself.
+The initial 416 count is user-provided. The app does not prove that 416 physical pieces are visible.
+Phase 9 uses a separate Android package ID from the earlier Phase 3 APK so both can coexist. The older Phase 3 app's local database is not automatically migrated into the Phase 9 app; it remains in the old app until you choose to remove it.
+The ledger is conservative: ambiguous child counts move into unassigned instead of inventing counts. Automatic detections cannot silently modify the ledger.
+Confidence is a heuristic tracking score, not measured accuracy. Accuracy must be established with labelled ground-truth videos.
+Plane/side calibration produces local projected scale. It does not by itself calculate a physically correct 3D pose, correct all perspective effects, or guarantee sub-millimetre height accuracy.
+The 416 layer drawing is a conceptual schematic. Display tilt is manually selected; automatic video-derived 3D pose is not implemented/verified in this candidate.
+Frame timestamps are estimated from available indexed-frame count and video duration. Variable-frame-rate media may need a later MediaExtractor/MediaCodec presentation-timestamp decoder for stricter timestamp accuracy.
+Split/merge detection remains candidate-level. Count allocation is manual and must be checked by the user. No 100% accuracy claim is made.
+Build from phone using GitHub Actions
+Upload these files once:
+MJ_STACK_TRACKER_PHASE9_INTEGRATED_SOURCE.zip to the repository root.
+README.md to the repository root (this file; replace the old README).
+build-phase9-integrated.yml to .github/workflows/build-phase9-integrated.yml.
+Then open Actions → Build MJ Stack Tracker Phase 9 Integrated → Run workflow. The workflow validates the ZIP contents, extracts the project, runs testDebugUnitTest, builds assembleDebug, verifies the APK, and uploads build diagnostics.
+Expected artifact: MJ-Stack-Tracker-Phase9-debug-apk; APK path inside artifact: app-debug.apk.
+The workflow pins the Android build versions used by this project: AGP 9.4.0, Gradle 9.6.0, JDK 17, compile SDK 36. See the official AGP 9.4.0 release notes for compatibility.
+Phone test checklist after a successful build
+Confirm app title says Integrated Phase 9, not Phase 3.
+Confirm MARK WORK AREA, LOCK INITIAL STACK, and the count/thickness inputs are visible.
+Load a test video, mark the table movement area, pause on the intact initial stack, then lock it.
+Run analysis for a short clip. Verify that the first candidate is sought inside the master rectangle and child IDs use M01-Pxx.
+Verify that a visible candidate/split does not change the ledger automatically.
+Test an unknown split: the piece count should move to unassigned, preserving the conservation equation.
+Test export, history review, event confirm/reject/delete, and app restart.
+Record false detections, missed tracks, ID switches, pending events, processing speed and memory use before using the model on longer videos.
