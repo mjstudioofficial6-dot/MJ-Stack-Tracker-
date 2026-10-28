@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'MJ_STACK_TRACKER_PHASE9_1_INTEGRATED_SOURCE.zip'
+      - 'MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE.zip'
       - 'README.md'
       - '.github/workflows/build-phase9-1-integrated.yml'
 
@@ -24,11 +24,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_NAME="MJ_STACK_TRACKER_PHASE9_1_INTEGRATED_SOURCE.zip"
+          ZIP_NAME="MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE.zip"
           [[ -s "$ZIP_NAME" ]] || { echo "ERROR: $ZIP_NAME must exist in the repository root."; exit 1; }
           python3 - <<'PY'
           import sys, zipfile
-          zname = 'MJ_STACK_TRACKER_PHASE9_1_INTEGRATED_SOURCE.zip'
+          zname = 'MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE.zip'
           required = {
               'settings.gradle', 'build.gradle', 'gradle.properties', 'README.md',
               'app/build.gradle', 'app/src/main/AndroidManifest.xml',
@@ -74,7 +74,7 @@ jobs:
                   'manual master seed used for initial track': 'new DetectionCandidate(masterBox[0],masterBox[1],masterBox[2],masterBox[3],100f)' in main and 'masterSeeded=true' in main,
                   'saved history method exists and uses SQLite session/event lists': 'private void refreshHistory()' in main and 'getRecentSessions(50)' in main and 'getRecentEvents(100)' in main,
                   'CSV export implementation exists': 'private String buildCsvExport()' in main and 'private void appendCsvRow(' in main and 'private String csvCell(' in main,
-                  'checked JSONException handling for calibration JSON': 'import org.json.JSONException;' in main and 'catch (JSONException e)' in main and 'Unable to serialize calibration coordinates' in main,
+                  'calibration JSON uses non-throwing JSONArray object overload': 'array.put((Object) Double.valueOf((double) value));' in main and 'import org.json.JSONException;' not in main and 'catch (JSONException e)' not in main,
                   'correct OpenCV colour conversion': 'COLOR_RGBA2HSV' not in detector and 'COLOR_RGB2HSV' in detector,
                   'no camera permission': 'android.permission.CAMERA' not in manifest,
                   'no internet permission': 'android.permission.INTERNET' not in manifest,
@@ -95,7 +95,7 @@ jobs:
           set -euo pipefail
           rm -rf app
           rm -f build.gradle settings.gradle gradle.properties
-          unzip -oq MJ_STACK_TRACKER_PHASE9_1_INTEGRATED_SOURCE.zip -d "$GITHUB_WORKSPACE"
+          unzip -oq MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE.zip -d "$GITHUB_WORKSPACE"
           for path in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
             [[ -s "$path" ]] || { echo "ERROR: missing extracted project path: $path"; exit 1; }
           done
