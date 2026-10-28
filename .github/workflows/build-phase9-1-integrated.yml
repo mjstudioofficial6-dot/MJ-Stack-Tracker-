@@ -78,6 +78,11 @@ jobs:
                   'correct OpenCV colour conversion': 'COLOR_RGBA2HSV' not in detector and 'COLOR_RGB2HSV' in detector,
                   'no camera permission': 'android.permission.CAMERA' not in manifest,
                   'no internet permission': 'android.permission.INTERNET' not in manifest,
+                  'fixed video viewport is not wrapped in the root vertical ScrollView': 'root.addView(videoViewport' in main and 'setContentView(root)' in main and 'ScrollView scroll=new ScrollView(this)' not in main,
+                  'horizontal Model/Video/History panels': 'HorizontalScrollView pageScroller' in main and 'MODEL & INVENTORY' in main and 'VIDEO & ANALYSIS' in main and 'HISTORY & EXPORT' in main,
+                  'pinch zoom and two-finger pan support': 'ACTION_POINTER_DOWN' in main and 'zoomScale = Math.max(1f, Math.min(5f, zoomScale * factor))' in main and 'RESET VIDEO ZOOM' in main,
+                  'separate slow-motion toolbar removed': 'Review speed — slower playback is supported' not in main and '0.25x' not in main and '0.75x' not in main,
+                  'JSON/CSV exports grouped with history': main.index('EXPORT JSON') > main.index('HISTORY & EXPORT') and main.index('EXPORT CSV') > main.index('HISTORY & EXPORT'),
                   'master rectangle selection implemented': 'setMasterSelectionMode' in overlay and 'OnMasterStackSelectedListener' in overlay,
                   'event tap seeks matching source video timestamp': 'player.seekTo(Math.max(0L,e.timestampMs))' in main and 'getSessionUri(e.sessionId)' in main,
               }
