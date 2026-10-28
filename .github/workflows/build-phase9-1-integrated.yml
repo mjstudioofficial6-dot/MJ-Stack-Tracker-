@@ -72,6 +72,7 @@ jobs:
                   'Phase 9.1 version': "versionName '0.9.1'" in gradle and "versionCode 10" in gradle,
                   'separate Phase 9 package for safe side-by-side install': "applicationId 'com.mj.stacktracker.phase9'" in gradle,
                   'manual master seed used for initial track': 'new DetectionCandidate(masterBox[0],masterBox[1],masterBox[2],masterBox[3],100f)' in main and 'masterSeeded=true' in main,
+                  'saved history method exists and uses SQLite session/event lists': 'private void refreshHistory()' in main and 'getRecentSessions(50)' in main and 'getRecentEvents(100)' in main,
                   'checked JSONException handling for calibration JSON': 'import org.json.JSONException;' in main and 'catch (JSONException e)' in main and 'Unable to serialize calibration coordinates' in main,
                   'correct OpenCV colour conversion': 'COLOR_RGBA2HSV' not in detector and 'COLOR_RGB2HSV' in detector,
                   'no camera permission': 'android.permission.CAMERA' not in manifest,
