@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE.zip'
+      - 'MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE_copy.zip'
       - 'README.md'
       - '.github/workflows/build-phase9-1-integrated.yml'
 
@@ -24,11 +24,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_NAME="MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE.zip"
+          ZIP_NAME="MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE_copy.zip"
           [[ -s "$ZIP_NAME" ]] || { echo "ERROR: $ZIP_NAME must exist in the repository root."; exit 1; }
           python3 - <<'PY'
           import sys, zipfile
-          zname = 'MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE.zip'
+          zname = 'MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE_copy.zip'
           required = {
               'settings.gradle', 'build.gradle', 'gradle.properties', 'README.md',
               'app/build.gradle', 'app/src/main/AndroidManifest.xml',
@@ -100,7 +100,7 @@ jobs:
           set -euo pipefail
           rm -rf app
           rm -f build.gradle settings.gradle gradle.properties
-          unzip -oq MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE.zip -d "$GITHUB_WORKSPACE"
+          unzip -oq MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE_copy.zip -d "$GITHUB_WORKSPACE"
           for path in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
             [[ -s "$path" ]] || { echo "ERROR: missing extracted project path: $path"; exit 1; }
           done
