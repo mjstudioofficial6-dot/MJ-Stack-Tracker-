@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE.zip'
+      - 'MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE_NEW.zip'
       - 'README.md'
       - '.github/workflows/build-phase9-2-pile-tracking.yml'
 
@@ -24,11 +24,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_NAME="MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE.zip"
+          ZIP_NAME="MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE_NEW.zip"
           [[ -s "$ZIP_NAME" ]] || { echo "ERROR: $ZIP_NAME must exist in the repository root."; exit 1; }
           python3 - <<'PY'
           import sys, zipfile
-          zname = 'MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE.zip'
+          zname = 'MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE_NEW.zip'
           required = {
               'settings.gradle', 'build.gradle', 'gradle.properties', 'README.md',
               'app/build.gradle', 'app/src/main/AndroidManifest.xml',
@@ -72,6 +72,7 @@ jobs:
                   'history export': 'EXPORT JSON' in main and 'EXPORT CSV' in main,
                   'event review and session delete/share': 'updateEventStatus' in text['app/src/main/java/com/mj/stacktracker/LocalHistoryDb.java'] and 'deleteEvent' in text['app/src/main/java/com/mj/stacktracker/LocalHistoryDb.java'] and 'deleteSession' in text['app/src/main/java/com/mj/stacktracker/LocalHistoryDb.java'] and 'shareSession' in main,
                   'automatic local session folder and shareable ZIP report': 'createSessionBundleArchive(sessionId)' in main and 'shareSessionArchive(sessionId, name)' in main and 'FileProvider.getUriForFile' in main and 'technical-events.json' in main and 'pileTimeline' in main and 'getSessionEvents(long sessionId)' in text['app/src/main/java/com/mj/stacktracker/LocalHistoryDb.java'] and 'androidx.core.content.FileProvider' in manifest and 'session_export_paths' in manifest and '<files-path name="session_exports" path="session_exports/"' in text['app/src/main/res/xml/session_export_paths.xml'],
+                  'AndroidX Core dependency for FileProvider': 'androidx.core:core:1.17.0' in gradle,
                   'Phase 9.2 version': "versionName '0.9.2'" in gradle and "versionCode 11" in gradle,
                   'Phase 9 package ID remains consistent for in-place upgrade': "applicationId 'com.mj.stacktracker.phase9'" in gradle,
                   'locked object seeds Pile 1': 'manager.seedMaster(masterBox)' in main and 'void seedMaster(float[] box)' in tracker,
@@ -106,7 +107,7 @@ jobs:
           set -euo pipefail
           rm -rf app
           rm -f build.gradle settings.gradle gradle.properties
-          unzip -oq MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE.zip -d "$GITHUB_WORKSPACE"
+          unzip -oq MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE_NEW.zip -d "$GITHUB_WORKSPACE"
           for path in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
             [[ -s "$path" ]] || { echo "ERROR: missing extracted project path: $path"; exit 1; }
           done
@@ -190,3 +191,4 @@ jobs:
             app/build/reports/**
           if-no-files-found: warn
           retention-days: 30
+          
