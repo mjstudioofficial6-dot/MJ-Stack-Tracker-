@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'MJ_STACK_TRACKER_PHASE9_3_LOCKED_LINEAGE_SOURCE.zip'
+      - 'MJ_STACK_TRACKER_PHASE9_3_LOCKED_LINEAGE_SOURCE_FINAL.zip'
       - 'README.md'
       - '.github/workflows/build-phase9-3-locked-lineage.yml'
 
@@ -24,11 +24,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_NAME="MJ_STACK_TRACKER_PHASE9_3_LOCKED_LINEAGE_SOURCE.zip"
+          ZIP_NAME="MJ_STACK_TRACKER_PHASE9_3_LOCKED_LINEAGE_SOURCE_FINAL.zip"
           [[ -s "$ZIP_NAME" ]] || { echo "ERROR: $ZIP_NAME must exist in the repository root."; exit 1; }
           python3 - <<'PY'
           import sys, zipfile
-          zname = 'MJ_STACK_TRACKER_PHASE9_3_LOCKED_LINEAGE_SOURCE.zip'
+          zname = 'MJ_STACK_TRACKER_PHASE9_3_LOCKED_LINEAGE_SOURCE_FINAL.zip'
           required = {
               'settings.gradle', 'build.gradle', 'gradle.properties', 'README.md',
               'app/build.gradle', 'app/src/main/AndroidManifest.xml',
@@ -110,7 +110,7 @@ jobs:
           set -euo pipefail
           rm -rf app
           rm -f build.gradle settings.gradle gradle.properties
-          unzip -oq MJ_STACK_TRACKER_PHASE9_3_LOCKED_LINEAGE_SOURCE.zip -d "$GITHUB_WORKSPACE"
+          unzip -oq MJ_STACK_TRACKER_PHASE9_3_LOCKED_LINEAGE_SOURCE_FINAL.zip -d "$GITHUB_WORKSPACE"
           for path in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
             [[ -s "$path" ]] || { echo "ERROR: missing extracted project path: $path"; exit 1; }
           done
