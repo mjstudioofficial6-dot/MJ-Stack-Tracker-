@@ -1,37 +1,38 @@
-name: Build MJ Stack Tracker Phase 9.1 Integrated
+name: Build MJ Stack Tracker Phase 9.2 Pile Tracking
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE_copy.zip'
+      - 'MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE.zip'
       - 'README.md'
-      - '.github/workflows/build-phase9-1-integrated.yml'
+      - '.github/workflows/build-phase9-2-pile-tracking.yml'
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Validate, test and build Phase 9.1 build candidate
+    name: Validate, test and build Phase 9.2 pile-tracking candidate
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
 
-      - name: Validate source archive and required Phase 9.1 controls
+      - name: Validate source archive and required Phase 9.2 controls
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_NAME="MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE_copy.zip"
+          ZIP_NAME="MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE.zip"
           [[ -s "$ZIP_NAME" ]] || { echo "ERROR: $ZIP_NAME must exist in the repository root."; exit 1; }
           python3 - <<'PY'
           import sys, zipfile
-          zname = 'MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE_copy.zip'
+          zname = 'MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE.zip'
           required = {
               'settings.gradle', 'build.gradle', 'gradle.properties', 'README.md',
               'app/build.gradle', 'app/src/main/AndroidManifest.xml',
+              'app/src/main/res/xml/session_export_paths.xml',
               'app/src/main/java/com/mj/stacktracker/MainActivity.java',
               'app/src/main/java/com/mj/stacktracker/FrameDetector.java',
               'app/src/main/java/com/mj/stacktracker/FrameOverlayView.java',
@@ -43,6 +44,7 @@ jobs:
               'app/src/main/java/com/mj/stacktracker/LayerModelView.java',
               'app/src/test/java/com/mj/stacktracker/StackLedgerTest.java',
               'app/src/test/java/com/mj/stacktracker/MetricMathTest.java',
+              'app/src/test/java/com/mj/stacktracker/TrackManagerTest.java',
               'PHASE9_REQUIREMENT_AUDIT.md',
           }
           with zipfile.ZipFile(zname) as z:
@@ -61,25 +63,29 @@ jobs:
               gradle = text['app/build.gradle']
               manifest = text['app/src/main/AndroidManifest.xml']
               checks = {
-                  'work-area selection control': 'MARK WORK AREA' in main,
-                  'initial master lock control': 'LOCK INITIAL STACK' in main,
-                  'stable master lineage root': 'MASTER-001' in main and 'M01-P' in tracker,
+                  'work-area selection and saved rectangle hide': 'MARK WORK AREA' in main and 'setWorkAreaVisible(false)' in main and 'setWorkAreaVisible(boolean visible)' in overlay,
+                  'initial master lock control': 'LOCK OBJECT' in main,
+                  'stable master lineage root': 'PILE-01' in tracker and 'seedMaster(masterBox)' in main and 'POSSIBLE_SPLIT' in tracker,
                   'pending split-event handling': 'POSSIBLE_SPLIT' in tracker,
                   'conservation ledger': 'initial + added' in text['app/src/main/java/com/mj/stacktracker/StackLedger.java'] or 'getAccountedTotal' in text['app/src/main/java/com/mj/stacktracker/StackLedger.java'],
-                  'separate table/side calibration controls': 'CALIBRATE TABLE PLANE' in main and 'CALIBRATE STACK SIDE' in main,
+                  'separate table/side calibration controls': 'TABLE CALIBRATION' in main and 'STACK-SIDE CALIBRATION' in main,
                   'history export': 'EXPORT JSON' in main and 'EXPORT CSV' in main,
-                  'local event review/edit/delete': 'updateEventStatus' in text['app/src/main/java/com/mj/stacktracker/LocalHistoryDb.java'] and 'deleteEvent' in text['app/src/main/java/com/mj/stacktracker/LocalHistoryDb.java'],
-                  'Phase 9.1 version': "versionName '0.9.1'" in gradle and "versionCode 10" in gradle,
-                  'separate Phase 9 package for safe side-by-side install': "applicationId 'com.mj.stacktracker.phase9'" in gradle,
-                  'manual master seed used for initial track': 'new DetectionCandidate(masterBox[0],masterBox[1],masterBox[2],masterBox[3],100f)' in main and 'masterSeeded=true' in main,
-                  'saved history method exists and uses SQLite session/event lists': 'private void refreshHistory()' in main and 'getRecentSessions(50)' in main and 'getRecentEvents(100)' in main,
+                  'event review and session delete/share': 'updateEventStatus' in text['app/src/main/java/com/mj/stacktracker/LocalHistoryDb.java'] and 'deleteEvent' in text['app/src/main/java/com/mj/stacktracker/LocalHistoryDb.java'] and 'deleteSession' in text['app/src/main/java/com/mj/stacktracker/LocalHistoryDb.java'] and 'shareSession' in main,
+                  'automatic local session folder and shareable ZIP report': 'createSessionBundleArchive(sessionId)' in main and 'shareSessionArchive(sessionId, name)' in main and 'FileProvider.getUriForFile' in main and 'technical-events.json' in main and 'pileTimeline' in main and 'getSessionEvents(long sessionId)' in text['app/src/main/java/com/mj/stacktracker/LocalHistoryDb.java'] and 'androidx.core.content.FileProvider' in manifest and 'session_export_paths' in manifest and '<files-path name="session_exports" path="session_exports/"' in text['app/src/main/res/xml/session_export_paths.xml'],
+                  'Phase 9.2 version': "versionName '0.9.2'" in gradle and "versionCode 11" in gradle,
+                  'Phase 9 package ID remains consistent for in-place upgrade': "applicationId 'com.mj.stacktracker.phase9'" in gradle,
+                  'locked object seeds Pile 1': 'manager.seedMaster(masterBox)' in main and 'void seedMaster(float[] box)' in tracker,
+                  'child tracks cannot steal Pile 1 identity': 'looksLikeWholeMaster(d,t)' in tracker and 'intersectionArea(d.left' in tracker,
+                  'lineage regression tests included': 'app/src/test/java/com/mj/stacktracker/TrackManagerTest.java' in names and 'separateChildMustPersistThreeFramesAndCannotReplacePileOne' in z.read('app/src/test/java/com/mj/stacktracker/TrackManagerTest.java').decode('utf-8'),
+                  'human-readable chronological pile history persists': 'private void refreshPileRows(String query)' in main and 'PILE_CREATED' in main and 'PILE_COUNT_UPDATED' in main and 'PILE_STATUS' in main and 'getPileEvents(pileSessionId)' in main and 'setPiles(names, counts, estimated' in main,
+                  'pile model synchronizes to saved video timestamps': 'updateModelTimelineAtPlaybackPosition(playheadMs)' in main and 'buildPileStateMap(events, playheadMs)' in main and 'Video timeline' in main,
                   'CSV export implementation exists': 'private String buildCsvExport()' in main and 'private void appendCsvRow(' in main and 'private String csvCell(' in main,
                   'calibration JSON uses non-throwing JSONArray object overload': 'array.put((Object) Double.valueOf((double) value));' in main and 'import org.json.JSONException;' not in main and 'catch (JSONException e)' not in main,
                   'correct OpenCV colour conversion': 'COLOR_RGBA2HSV' not in detector and 'COLOR_RGB2HSV' in detector,
                   'no camera permission': 'android.permission.CAMERA' not in manifest,
                   'no internet permission': 'android.permission.INTERNET' not in manifest,
                   'fixed video viewport is not wrapped in the root vertical ScrollView': 'root.addView(videoViewport' in main and 'setContentView(root)' in main and 'ScrollView scroll=new ScrollView(this)' not in main,
-                  'horizontal Model/Video/History panels': 'HorizontalScrollView pageScroller' in main and 'MODEL & INVENTORY' in main and 'VIDEO & ANALYSIS' in main and 'HISTORY & EXPORT' in main,
+                  'horizontal Model/Video/History panels with controls relocated': 'HorizontalScrollView pageScroller' in main and 'MODEL & INVENTORY' in main and 'VIDEO & ANALYSIS' in main and 'HISTORY & EXPORT' in main and main.index('PanelPage videoPage = createPanelPage("VIDEO & ANALYSIS")') < main.index('addButton(masterRow, "LOCK OBJECT"') and main.index('addButton(calRow, "TABLE CALIBRATION"') > main.index('PanelPage videoPage = createPanelPage("VIDEO & ANALYSIS")'),
                   'pinch zoom and two-finger pan support': 'ACTION_POINTER_DOWN' in main and 'zoomScale = Math.max(1f, Math.min(5f, zoomScale * factor))' in main and 'RESET VIDEO ZOOM' in main,
                   'separate slow-motion toolbar removed': 'Review speed — slower playback is supported' not in main and '0.25x' not in main and '0.75x' not in main,
                   'JSON/CSV exports grouped with history': main.index('EXPORT JSON') > main.index('HISTORY & EXPORT') and main.index('EXPORT CSV') > main.index('HISTORY & EXPORT'),
@@ -100,7 +106,7 @@ jobs:
           set -euo pipefail
           rm -rf app
           rm -f build.gradle settings.gradle gradle.properties
-          unzip -oq MJ_STACK_TRACKER_PHASE9_1_JSONFIX3_SOURCE_copy.zip -d "$GITHUB_WORKSPACE"
+          unzip -oq MJ_STACK_TRACKER_PHASE9_2_PILE_TRACKING_SOURCE.zip -d "$GITHUB_WORKSPACE"
           for path in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
             [[ -s "$path" ]] || { echo "ERROR: missing extracted project path: $path"; exit 1; }
           done
@@ -120,12 +126,12 @@ jobs:
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Set up Gradle 9.6.0
-        uses: gradle/actions/setup-gradle@v6.4.0
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.0'
 
       - name: Restore stable debug signing key for app upgrades
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/.android/debug.keystore
           key: mj-stack-tracker-phase9-debug-keystore-v1
@@ -138,7 +144,7 @@ jobs:
 
       - name: Save debug signing key for future compatible installs
         if: success() && hashFiles('app/build/outputs/apk/debug/app-debug.apk') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/.android/debug.keystore
           key: mj-stack-tracker-phase9-debug-keystore-v1
@@ -156,15 +162,15 @@ jobs:
           [[ -x "$AAPT" ]] || { echo "ERROR: aapt not found at $AAPT"; exit 1; }
           [[ -x "$APKSIGNER" ]] || { echo "ERROR: apksigner not found at $APKSIGNER"; exit 1; }
           "$AAPT" dump badging "$APK" | tee apk-badging.txt
-          grep -F "package: name='com.mj.stacktracker.phase9' versionCode='10' versionName='0.9.1'" apk-badging.txt
+          grep -F "package: name='com.mj.stacktracker.phase9' versionCode='11' versionName='0.9.2'" apk-badging.txt
           "$APKSIGNER" verify --verbose --print-certs "$APK" > signing-details.txt
           sha256sum "$APK" | tee apk-sha256.txt
           ls -lh "$APK"
 
-      - name: Upload Phase 9.1 debug APK
+      - name: Upload Phase 9.2 debug APK
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: MJ-Stack-Tracker-Phase9.1-debug-apk
+          name: MJ-Stack-Tracker-Phase9.2-debug-apk
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             apk-sha256.txt
@@ -176,7 +182,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: MJ-Stack-Tracker-Phase9.1-build-diagnostics
+          name: MJ-Stack-Tracker-Phase9.2-build-diagnostics
           path: |
             build.log
             apk-badging.txt
