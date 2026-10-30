@@ -1,43 +1,45 @@
-name: Build MJ Stack Tracker Phase 10 Automatic Transfer
+name: Build MJ Stack Tracker Phase 10.1 Tabletop ROI
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'MJ_STACK_TRACKER_PHASE10_AUTOMATIC_TRANSFER_SOURCE.zip'
-      - '.github/workflows/build-phase10-automatic-transfer.yml'
+      - 'MJ_STACK_TRACKER_PHASE10_1_TABLETOP_ROI_SOURCE.zip'
+      - '.github/workflows/build-phase10-1-tabletop-roi.yml'
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Validate, test and build Phase 10 APK
+    name: Validate, test and build Phase 10.1 APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
 
-      - name: Validate Phase 10 source archive
+      - name: Validate Phase 10.1 source archive
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_NAME="MJ_STACK_TRACKER_PHASE10_AUTOMATIC_TRANSFER_SOURCE.zip"
+          ZIP_NAME="MJ_STACK_TRACKER_PHASE10_1_TABLETOP_ROI_SOURCE.zip"
           [[ -s "$ZIP_NAME" ]] || { echo "ERROR: upload $ZIP_NAME to the repository root."; exit 1; }
           python3 - <<'PY'
           import sys, zipfile
           import xml.etree.ElementTree as ET
           from pathlib import PurePosixPath
 
-          archive = 'MJ_STACK_TRACKER_PHASE10_AUTOMATIC_TRANSFER_SOURCE.zip'
+          archive = 'MJ_STACK_TRACKER_PHASE10_1_TABLETOP_ROI_SOURCE.zip'
           required = {
               'settings.gradle', 'build.gradle', 'gradle.properties', 'README.md',
-              'PHASE10_REQUIREMENT_AUDIT.md',
+              'PHASE10_REQUIREMENT_AUDIT.md', 'PHASE10_1_VIDEO_CROSSCHECK.md',
+              'PHASE10_1_VALIDATION_REPORT.txt',
               'app/build.gradle', 'app/src/main/AndroidManifest.xml',
               'app/src/main/java/com/mj/stacktracker/AutomaticMainActivity.java',
               'app/src/main/java/com/mj/stacktracker/automatic/AutomaticAnalyzer.java',
               'app/src/main/java/com/mj/stacktracker/automatic/CardStackVision.java',
+              'app/src/main/java/com/mj/stacktracker/automatic/TabletopCandidatePolicy.java',
               'app/src/main/java/com/mj/stacktracker/automatic/RelativeCountEstimator.java',
               'app/src/main/java/com/mj/stacktracker/automatic/AutomaticTransferEngine.java',
               'app/src/main/java/com/mj/stacktracker/automatic/AnalysisSnapshot.java',
@@ -45,6 +47,7 @@ jobs:
               'app/src/main/java/com/mj/stacktracker/automatic/TransferEvent.java',
               'app/src/test/java/com/mj/stacktracker/automatic/RelativeCountEstimatorTest.java',
               'app/src/test/java/com/mj/stacktracker/automatic/AutomaticTransferEngineTest.java',
+              'app/src/test/java/com/mj/stacktracker/automatic/TabletopCandidatePolicyTest.java',
           }
           with zipfile.ZipFile(archive) as z:
               bad = z.testzip()
@@ -55,16 +58,18 @@ jobs:
               if missing:
                   sys.exit('Missing required source entries:\n' + '\n'.join(missing))
               for name in names:
-                  p = PurePosixPath(name)
-                  if p.is_absolute() or '..' in p.parts:
+                  path = PurePosixPath(name)
+                  if path.is_absolute() or '..' in path.parts:
                       sys.exit(f'Unsafe ZIP path: {name}')
                   if name.startswith(('.git/', '.gradle/', 'app/build/')):
                       sys.exit(f'Generated/local build content in source ZIP: {name}')
+                  if name.lower().endswith(('.mp4', '.mov', '.mkv', '.avi')):
+                      sys.exit(f'Private test video must not be bundled: {name}')
               for name in sorted(n for n in names if n.endswith('.xml')):
                   try:
                       ET.fromstring(z.read(name))
-                  except ET.ParseError as e:
-                      sys.exit(f'Invalid XML in {name}: {e}')
+                  except ET.ParseError as error:
+                      sys.exit(f'Invalid XML in {name}: {error}')
               def read(path): return z.read(path).decode('utf-8', errors='replace')
               app_gradle = read('app/build.gradle')
               root_gradle = read('build.gradle')
@@ -73,39 +78,45 @@ jobs:
               activity = read('app/src/main/java/com/mj/stacktracker/AutomaticMainActivity.java')
               analyzer = read('app/src/main/java/com/mj/stacktracker/automatic/AutomaticAnalyzer.java')
               vision = read('app/src/main/java/com/mj/stacktracker/automatic/CardStackVision.java')
-              estimator = read('app/src/main/java/com/mj/stacktracker/automatic/RelativeCountEstimator.java')
-              transfer = read('app/src/main/java/com/mj/stacktracker/automatic/AutomaticTransferEngine.java')
+              policy = read('app/src/main/java/com/mj/stacktracker/automatic/TabletopCandidatePolicy.java')
+              policy_test = read('app/src/test/java/com/mj/stacktracker/automatic/TabletopCandidatePolicyTest.java')
+              transfer_test = read('app/src/test/java/com/mj/stacktracker/automatic/AutomaticTransferEngineTest.java')
+              transfer_engine = read('app/src/main/java/com/mj/stacktracker/automatic/AutomaticTransferEngine.java')
               checks = {
-                'Phase 10 version 1.0.0 / versionCode 16': "versionCode 16" in app_gradle and "versionName '1.0.0'" in app_gradle,
-                'preserved application ID': "applicationId 'com.mj.stacktracker.phase9'" in app_gradle,
+                'Phase 10.1 version 1.0.1 / versionCode 17': "versionCode 17" in app_gradle and "versionName '1.0.1'" in app_gradle,
+                'preserved application ID for upgrade': "applicationId 'com.mj.stacktracker.phase9'" in app_gradle,
                 'Android Gradle Plugin 9.4.0': "id 'com.android.application' version '9.4.0'" in root_gradle,
                 'only app module is included': "include ':app'" in settings and 'cardchange-engine' not in settings,
                 'Media3 local video playback dependency': 'media3-exoplayer' in app_gradle and 'media3-ui' in app_gradle,
                 'OpenCV local image analysis dependency': 'org.opencv:opencv:4.14.0' in app_gradle,
-                'Phase 10 activity is launcher': 'android:name=".AutomaticMainActivity"' in manifest and 'android.intent.action.MAIN' in manifest,
-                'camera and Internet permissions explicitly removed from merged manifest': 'android.permission.CAMERA' in manifest and 'android.permission.INTERNET' in manifest and 'tools:node="remove"' in manifest,
-                'video analysis uses on-device retriever': 'MediaMetadataRetriever' in analyzer,
-                'full-frame automatic pile vision exists': 'Imgproc.findContours' in vision and 'Sobel' in vision,
-                '416 reference relative counting exists': 'RelativeCountEstimator(416)' in vision and 'initialCount*ratio' in estimator,
-                'source/destination delta pairing and conservation exist': 'pairTransfers' in transfer and 'accounted==initialCount' in transfer,
+                'Phase 10.1 activity remains launcher': 'android:name=".AutomaticMainActivity"' in manifest and 'android.intent.action.MAIN' in manifest,
+                'camera and Internet permissions removed from merged manifest': 'android.permission.CAMERA' in manifest and 'android.permission.INTERNET' in manifest and 'tools:node="remove"' in manifest,
+                'analysis retains dense 180 ms local sampling': 'SAMPLE_INTERVAL_MS=180' in analyzer and 'MediaMetadataRetriever' in analyzer,
+                'tabletop-only image mask is used': 'TabletopCandidatePolicy.accepts' in vision and 'Core.bitwise_and(whiteMask, roiMask, whiteMask)' in vision,
+                'candidate policy has calibrated table-zone gates': 'cx >= 0.28' in policy and 'cy >= 0.50' in policy,
+                'video diagnostics are displayed': 'tabletop candidates' in analyzer.lower() and 'validPileObservations' in analyzer,
+                'policy tests include actual clip candidate boxes': 'acceptsFourFinalPileShapesFromSuppliedClip' in policy_test,
+                'known 416 opening pile can seed from presence-only evidence': 'knownStartingDeckCanBeTrackedFromPresenceOnlyEvidence' in transfer_test and 'committedCount=initialCount' in transfer_engine,
+                'presence-only child observations cannot create child quantities': 'presenceOnlyChildDoesNotCreateInventedQuantity' in transfer_test and 'if(o.countValid)' in transfer_engine,
+                'smaller child cannot inherit known parent count': 'smallerNearbyPresenceOnlyChildCannotInheritThe416CardRoot' in transfer_test and 'size<0.65||size>1.55||d>0.16' in transfer_engine,
                 'no manual teach/object-lock/mm-calibration controls in new launcher': 'teachPendingAs' not in activity and 'beginCalibration' not in activity and 'LOCK OBJECT' not in activity,
               }
               for label, ok in checks.items(): print(('PASS: ' if ok else 'FAIL: ') + label)
-              failed = [k for k,v in checks.items() if not v]
-              if failed: sys.exit('Phase 10 source validation failed: ' + ', '.join(failed))
-          print('Phase 10 source ZIP and XML validation passed.')
+              failed = [label for label, ok in checks.items() if not ok]
+              if failed: sys.exit('Phase 10.1 source validation failed: ' + ', '.join(failed))
+          print('Phase 10.1 source ZIP and XML validation passed.')
           PY
 
-      - name: Extract Phase 10 source project
+      - name: Extract Phase 10.1 source project
         shell: bash
         run: |
           set -euo pipefail
           rm -rf app build.gradle settings.gradle gradle.properties
-          unzip -oq MJ_STACK_TRACKER_PHASE10_AUTOMATIC_TRANSFER_SOURCE.zip -d "$GITHUB_WORKSPACE"
-          for f in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
-            [[ -s "$f" ]] || { echo "ERROR: missing extracted project file: $f"; exit 1; }
+          unzip -oq MJ_STACK_TRACKER_PHASE10_1_TABLETOP_ROI_SOURCE.zip -d "$GITHUB_WORKSPACE"
+          for path in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
+            [[ -s "$path" ]] || { echo "ERROR: missing extracted project path: $path"; exit 1; }
           done
-          grep -F "versionName '1.0.0'" app/build.gradle
+          grep -F "versionName '1.0.1'" app/build.gradle
 
       - name: Set up JDK 17
         uses: actions/setup-java@v6.1.0
@@ -131,7 +142,7 @@ jobs:
           path: ~/.android/debug.keystore
           key: mj-stack-tracker-phase9-debug-keystore-v1
 
-      - name: Run automatic engine unit tests and build APK
+      - name: Run engine and tabletop policy unit tests, then build APK
         shell: bash
         run: |
           set -o pipefail
@@ -155,7 +166,7 @@ jobs:
           AAPT="$SDK_ROOT/build-tools/36.0.0/aapt"
           APKSIGNER="$SDK_ROOT/build-tools/36.0.0/apksigner"
           "$AAPT" dump badging "$APK" | tee apk-badging.txt
-          grep -F "package: name='com.mj.stacktracker.phase9' versionCode='16' versionName='1.0.0'" apk-badging.txt
+          grep -F "package: name='com.mj.stacktracker.phase9' versionCode='17' versionName='1.0.1'" apk-badging.txt
           "$AAPT" dump permissions "$APK" | tee apk-permissions.txt
           if grep -E 'android.permission.(CAMERA|INTERNET)' apk-permissions.txt; then
             echo 'ERROR: camera/Internet permission was unexpectedly merged into the APK.'; exit 1
@@ -164,10 +175,10 @@ jobs:
           sha256sum "$APK" | tee apk-sha256.txt
           ls -lh "$APK"
 
-      - name: Upload Phase 10 APK artifact
+      - name: Upload Phase 10.1 APK artifact
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: MJ-Stack-Tracker-Phase10-Automatic-Transfer-APK
+          name: MJ-Stack-Tracker-Phase10-1-Tabletop-ROI-APK
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             apk-sha256.txt
@@ -180,7 +191,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: MJ-Stack-Tracker-Phase10-build-diagnostics
+          name: MJ-Stack-Tracker-Phase10-1-build-diagnostics
           path: |
             build.log
             apk-badging.txt
@@ -189,4 +200,3 @@ jobs:
             app/build/reports/**
           if-no-files-found: warn
           retention-days: 30
-          
