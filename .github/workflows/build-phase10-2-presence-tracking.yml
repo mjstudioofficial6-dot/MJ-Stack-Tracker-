@@ -1,40 +1,40 @@
-name: Build MJ Stack Tracker Phase 10.1 Tabletop ROI
+name: Build MJ Stack Tracker Phase 10.2 Presence Tracking
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'MJ_STACK_TRACKER_PHASE10_1_TABLETOP_ROI_SOURCE.zip'
-      - '.github/workflows/build-phase10-1-tabletop-roi.yml'
+      - 'MJ_STACK_TRACKER_PHASE10_2_PRESENCE_TRACKING_SOURCE.zip'
+      - '.github/workflows/build-phase10-2-presence-tracking.yml'
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Validate, test and build Phase 10.1 APK
+    name: Validate, test and build Phase 10.2 APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
 
-      - name: Validate Phase 10.1 source archive
+      - name: Validate Phase 10.2 source archive
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_NAME="MJ_STACK_TRACKER_PHASE10_1_TABLETOP_ROI_SOURCE.zip"
+          ZIP_NAME="MJ_STACK_TRACKER_PHASE10_2_PRESENCE_TRACKING_SOURCE.zip"
           [[ -s "$ZIP_NAME" ]] || { echo "ERROR: upload $ZIP_NAME to the repository root."; exit 1; }
           python3 - <<'PY'
           import sys, zipfile
           import xml.etree.ElementTree as ET
           from pathlib import PurePosixPath
 
-          archive = 'MJ_STACK_TRACKER_PHASE10_1_TABLETOP_ROI_SOURCE.zip'
+          archive = 'MJ_STACK_TRACKER_PHASE10_2_PRESENCE_TRACKING_SOURCE.zip'
           required = {
               'settings.gradle', 'build.gradle', 'gradle.properties', 'README.md',
-              'PHASE10_REQUIREMENT_AUDIT.md', 'PHASE10_1_VIDEO_CROSSCHECK.md',
-              'PHASE10_1_VALIDATION_REPORT.txt',
+              'PHASE10_REQUIREMENT_AUDIT.md', 'PHASE10_2_VIDEO_CROSSCHECK.md',
+              'PHASE10_2_TEST_PLAN.md', 'PHASE10_2_VALIDATION_REPORT.txt',
               'app/build.gradle', 'app/src/main/AndroidManifest.xml',
               'app/src/main/java/com/mj/stacktracker/AutomaticMainActivity.java',
               'app/src/main/java/com/mj/stacktracker/automatic/AutomaticAnalyzer.java',
@@ -44,6 +44,7 @@ jobs:
               'app/src/main/java/com/mj/stacktracker/automatic/AutomaticTransferEngine.java',
               'app/src/main/java/com/mj/stacktracker/automatic/AnalysisSnapshot.java',
               'app/src/main/java/com/mj/stacktracker/automatic/PileObservation.java',
+              'app/src/main/java/com/mj/stacktracker/automatic/CardMeasurement.java',
               'app/src/main/java/com/mj/stacktracker/automatic/TransferEvent.java',
               'app/src/test/java/com/mj/stacktracker/automatic/RelativeCountEstimatorTest.java',
               'app/src/test/java/com/mj/stacktracker/automatic/AutomaticTransferEngineTest.java',
@@ -78,45 +79,58 @@ jobs:
               activity = read('app/src/main/java/com/mj/stacktracker/AutomaticMainActivity.java')
               analyzer = read('app/src/main/java/com/mj/stacktracker/automatic/AutomaticAnalyzer.java')
               vision = read('app/src/main/java/com/mj/stacktracker/automatic/CardStackVision.java')
-              policy = read('app/src/main/java/com/mj/stacktracker/automatic/TabletopCandidatePolicy.java')
-              policy_test = read('app/src/test/java/com/mj/stacktracker/automatic/TabletopCandidatePolicyTest.java')
-              transfer_test = read('app/src/test/java/com/mj/stacktracker/automatic/AutomaticTransferEngineTest.java')
-              transfer_engine = read('app/src/main/java/com/mj/stacktracker/automatic/AutomaticTransferEngine.java')
+              estimator = read('app/src/main/java/com/mj/stacktracker/automatic/RelativeCountEstimator.java')
+              transfer = read('app/src/main/java/com/mj/stacktracker/automatic/AutomaticTransferEngine.java')
+              snapshot = read('app/src/main/java/com/mj/stacktracker/automatic/AnalysisSnapshot.java')
+              engine_tests = read('app/src/test/java/com/mj/stacktracker/automatic/AutomaticTransferEngineTest.java')
+              estimator_tests = read('app/src/test/java/com/mj/stacktracker/automatic/RelativeCountEstimatorTest.java')
+              policy_tests = read('app/src/test/java/com/mj/stacktracker/automatic/TabletopCandidatePolicyTest.java')
               checks = {
-                'Phase 10.1 version 1.0.1 / versionCode 17': "versionCode 17" in app_gradle and "versionName '1.0.1'" in app_gradle,
-                'preserved application ID for upgrade': "applicationId 'com.mj.stacktracker.phase9'" in app_gradle,
+                'Phase 10.2 version 1.0.2 / versionCode 18': "versionCode 18" in app_gradle and "versionName '1.0.2'" in app_gradle,
+                'preserved app ID for in-place upgrade': "applicationId 'com.mj.stacktracker.phase9'" in app_gradle,
                 'Android Gradle Plugin 9.4.0': "id 'com.android.application' version '9.4.0'" in root_gradle,
-                'only app module is included': "include ':app'" in settings and 'cardchange-engine' not in settings,
-                'Media3 local video playback dependency': 'media3-exoplayer' in app_gradle and 'media3-ui' in app_gradle,
-                'OpenCV local image analysis dependency': 'org.opencv:opencv:4.14.0' in app_gradle,
-                'Phase 10.1 activity remains launcher': 'android:name=".AutomaticMainActivity"' in manifest and 'android.intent.action.MAIN' in manifest,
-                'camera and Internet permissions removed from merged manifest': 'android.permission.CAMERA' in manifest and 'android.permission.INTERNET' in manifest and 'tools:node="remove"' in manifest,
-                'analysis retains dense 180 ms local sampling': 'SAMPLE_INTERVAL_MS=180' in analyzer and 'MediaMetadataRetriever' in analyzer,
-                'tabletop-only image mask is used': 'TabletopCandidatePolicy.accepts' in vision and 'Core.bitwise_and(whiteMask, roiMask, whiteMask)' in vision,
-                'candidate policy has calibrated table-zone gates': 'cx >= 0.28' in policy and 'cy >= 0.50' in policy,
-                'video diagnostics are displayed': 'tabletop candidates' in analyzer.lower() and 'validPileObservations' in analyzer,
-                'policy tests include actual clip candidate boxes': 'acceptsFourFinalPileShapesFromSuppliedClip' in policy_test,
-                'known 416 opening pile can seed from presence-only evidence': 'knownStartingDeckCanBeTrackedFromPresenceOnlyEvidence' in transfer_test and 'committedCount=initialCount' in transfer_engine,
-                'presence-only child observations cannot create child quantities': 'presenceOnlyChildDoesNotCreateInventedQuantity' in transfer_test and 'if(o.countValid)' in transfer_engine,
-                'smaller child cannot inherit known parent count': 'smallerNearbyPresenceOnlyChildCannotInheritThe416CardRoot' in transfer_test and 'size<0.65||size>1.55||d>0.16' in transfer_engine,
-                'no manual teach/object-lock/mm-calibration controls in new launcher': 'teachPendingAs' not in activity and 'beginCalibration' not in activity and 'LOCK OBJECT' not in activity,
+                'single app module': "include ':app'" in settings and 'cardchange-engine' not in settings,
+                'Media3 local video playback': 'media3-exoplayer' in app_gradle and 'media3-ui' in app_gradle,
+                'local OpenCV image analysis': 'org.opencv:opencv:4.14.0' in app_gradle,
+                'Phase 10.2 activity remains launcher': 'android:name=".AutomaticMainActivity"' in manifest and 'android.intent.action.MAIN' in manifest,
+                'camera and Internet permissions removed': 'android.permission.CAMERA' in manifest and 'android.permission.INTERNET' in manifest and 'tools:node="remove"' in manifest,
+                'dense local video sampling': 'SAMPLE_INTERVAL_MS=180' in analyzer and 'MediaMetadataRetriever' in analyzer,
+                'tabletop candidate policy still used': 'TabletopCandidatePolicy.accepts' in vision,
+                'two-edge span no longer falls back to whole candidate box': 'chosen.peakCount >= 2 && chosen.peakSpan > 1' in vision,
+                'axis selection favours a multi-peak signal': 'sy.peakCount >= 2 && sx.peakCount < 2' in vision and 'sx.peakCount >= 2 && sy.peakCount < 2' in vision,
+                'quantity gate explicitly requires three visible layer edges': 'visibleEdgePeaks < 3' in estimator,
+                'quantity rejection reason is shown in UI diagnostics': 'quantityRejectionSummary' in vision and 'Latest quantity gate:' in analyzer,
+                'presence-only child tracks are created': 'Phase 10.2 correction' in transfer and 'new Track(String.format' in transfer,
+                'presence identity is stabilized over two samples': 'STABLE_PRESENCE_SAMPLES = 2' in transfer,
+                'opening root uses immutable geometry anchor': 'anchorArea' in transfer and 'anchorSizeRatio' in transfer,
+                'presence-only evidence cannot mutate numeric quantity': 'if (!observation.countValid) return;' in transfer,
+                'unknown quantity is explicitly represented in snapshot': 'quantityKnown' in snapshot and 'visibleUnknownPileCount' in snapshot,
+                'unknown piles are explicitly displayed': 'Quantity unknown (pile region tracked)' in activity,
+                'video regression covers actual final pile boxes': 'actualVideoFinalPileBoxesRemainFourSeparateUnknownTracks' in engine_tests,
+                'synthetic 1/20/25 transfer regression included': 'validMeasuredOneTwentyAndTwentyFiveCardTransfersAreRepresented' in engine_tests,
+                'two-peak rejection regression included': 'exactlyTwoEdgePeaksRemainUnassigned' in estimator_tests,
+                'tabletop false-positive regression retained': 'rejectsRightSideDealerEquipmentOutsidePileZone' in policy_tests,
+                're-analysis enabled after completion': 'analysisStarted=false;' in activity,
+                'no manual teach or mm calibration controls': 'teachPendingAs' not in activity and 'beginCalibration' not in activity and 'LOCK OBJECT' not in activity,
               }
-              for label, ok in checks.items(): print(('PASS: ' if ok else 'FAIL: ') + label)
+              for label, ok in checks.items():
+                  print(('PASS: ' if ok else 'FAIL: ') + label)
               failed = [label for label, ok in checks.items() if not ok]
-              if failed: sys.exit('Phase 10.1 source validation failed: ' + ', '.join(failed))
-          print('Phase 10.1 source ZIP and XML validation passed.')
+              if failed:
+                  sys.exit('Phase 10.2 source validation failed: ' + ', '.join(failed))
+          print('Phase 10.2 source ZIP and XML validation passed.')
           PY
 
-      - name: Extract Phase 10.1 source project
+      - name: Extract Phase 10.2 source project
         shell: bash
         run: |
           set -euo pipefail
           rm -rf app build.gradle settings.gradle gradle.properties
-          unzip -oq MJ_STACK_TRACKER_PHASE10_1_TABLETOP_ROI_SOURCE.zip -d "$GITHUB_WORKSPACE"
+          unzip -oq MJ_STACK_TRACKER_PHASE10_2_PRESENCE_TRACKING_SOURCE.zip -d "$GITHUB_WORKSPACE"
           for path in build.gradle settings.gradle gradle.properties app/build.gradle app/src/main/AndroidManifest.xml; do
             [[ -s "$path" ]] || { echo "ERROR: missing extracted project path: $path"; exit 1; }
           done
-          grep -F "versionName '1.0.1'" app/build.gradle
+          grep -F "versionName '1.0.2'" app/build.gradle
 
       - name: Set up JDK 17
         uses: actions/setup-java@v6.1.0
@@ -142,7 +156,7 @@ jobs:
           path: ~/.android/debug.keystore
           key: mj-stack-tracker-phase9-debug-keystore-v1
 
-      - name: Run engine and tabletop policy unit tests, then build APK
+      - name: Run regression tests and build Phase 10.2 APK
         shell: bash
         run: |
           set -o pipefail
@@ -166,7 +180,7 @@ jobs:
           AAPT="$SDK_ROOT/build-tools/36.0.0/aapt"
           APKSIGNER="$SDK_ROOT/build-tools/36.0.0/apksigner"
           "$AAPT" dump badging "$APK" | tee apk-badging.txt
-          grep -F "package: name='com.mj.stacktracker.phase9' versionCode='17' versionName='1.0.1'" apk-badging.txt
+          grep -F "package: name='com.mj.stacktracker.phase9' versionCode='18' versionName='1.0.2'" apk-badging.txt
           "$AAPT" dump permissions "$APK" | tee apk-permissions.txt
           if grep -E 'android.permission.(CAMERA|INTERNET)' apk-permissions.txt; then
             echo 'ERROR: camera/Internet permission was unexpectedly merged into the APK.'; exit 1
@@ -175,10 +189,10 @@ jobs:
           sha256sum "$APK" | tee apk-sha256.txt
           ls -lh "$APK"
 
-      - name: Upload Phase 10.1 APK artifact
+      - name: Upload Phase 10.2 APK artifact
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: MJ-Stack-Tracker-Phase10-1-Tabletop-ROI-APK
+          name: MJ-Stack-Tracker-Phase10-2-Presence-Tracking-APK
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             apk-sha256.txt
@@ -191,7 +205,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: MJ-Stack-Tracker-Phase10-1-build-diagnostics
+          name: MJ-Stack-Tracker-Phase10-2-build-diagnostics
           path: |
             build.log
             apk-badging.txt
